@@ -1,15 +1,15 @@
 // pull in our models. This will automatically load the index.js from that folder
 const models = require('../models');
 
-// get the Cat model
-const { Cat } = models;
+// get the Cat and Dog models
+const { Cat, Dog } = models;
 
 // Function to handle rendering the index page.
 const hostIndex = async (req, res) => {
-  //Start with the name as unknown
+  // Start with the name as unknown
   let name = 'unknown';
 
-  try{
+  try {
     /* Cat.findOne() will find a cat that matches the query given to it as the first parameter.
        In this case, we give it an empty object so it will match against any object it finds.
        The second parameter is essentially a filter for the values we want. This works similarly
@@ -19,16 +19,16 @@ const hostIndex = async (req, res) => {
        in descending order (so that more recent things are "on the top"). Since we are only
        finding one, this query will either find the most recent cat if it exists, or nothing.
     */
-    const doc = await Cat.findOne({}, {}, { 
-      sort: {'createdDate': 'descending'}
+    const doc = await Cat.findOne({}, {}, {
+      sort: { createdDate: 'descending' },
     }).lean().exec();
 
-    //If we did get a cat back, store it's name in the name variable.
-    if(doc) {
+    // If we did get a cat back, store it's name in the name variable.
+    if (doc) {
       name = doc.name;
     }
   } catch (err) {
-    //Just log out the error for our records.
+    // Just log out the error for our records.
     console.log(err);
   }
 
@@ -100,9 +100,21 @@ const hostPage3 = (req, res) => {
   res.render('page3');
 };
 
+// page4
+const hostPage4 = async (req, res) => {
+  try {
+    const dogs = await Dog.find({}).lean().exec();
+
+    return res.render('page4', { dogs });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).render('page4', { error: 'Failed to load dogs' });
+  }
+};
+
 // Get name will return the name of the last added cat.
 const getName = async (req, res) => {
-  try{
+  try {
     /* Here we are trying to do the exact same thing we did in host index up
        above. We want to find the most recently added cat. The only difference
        here is that we are using the query .sort() function rather than passing
@@ -110,21 +122,21 @@ const getName = async (req, res) => {
        functionally the same. We are just seeing that it can be written in
        more than one way.
     */
-    const doc = await Cat.findOne({}).sort({'createdDate': 'descending'}).lean().exec();
+    const doc = await Cat.findOne({}).sort({ createdDate: 'descending' }).lean().exec();
 
-    //If we did get a cat back, store it's name in the name variable.
-    if(doc) {
-      return res.json({name: doc.name});
+    // If we did get a cat back, store it's name in the name variable.
+    if (doc) {
+      return res.json({ name: doc.name });
     }
-    return res.status(404).json({error: 'No cat found'});
+    return res.status(404).json({ error: 'No cat found' });
   } catch (err) {
     /* If an error occurs, it means something went wrong with the database. We will
        give the user a 500 internal server error status code and an error message.
     */
     console.log(err);
-    return res.status(500).json({error: 'Something went wrong contacting the database'});
+    return res.status(500).json({ error: 'Something went wrong contacting the database' });
   }
-}
+};
 
 // Function to create a new cat in the database
 const setName = async (req, res) => {
@@ -252,15 +264,15 @@ const updateLast = (req, res) => {
      Finally, findOneAndUpdate would just update the most recent cat it finds that
      matches the query (which could be any cat). So we also need to tell Mongoose to
      sort all the cats in descending order by created date so that we update the
-     most recently added one. The returnDocument key with the 'after' value tells 
+     most recently added one. The returnDocument key with the 'after' value tells
      mongoose to give us back the version of the document AFTER the changes. Otherwise
      it will default to 'before' which gives us the document before the update.
 
      We can use async/await for this, or just use standard promise .then().catch() syntax.
   */
-  const updatePromise = Cat.findOneAndUpdate({}, {$inc: {'bedsOwned': 1}}, {
-    returnDocument: 'after', //Populates doc in the .then() with the version after update
-    sort: {'createdDate': 'descending'}
+  const updatePromise = Cat.findOneAndUpdate({}, { $inc: { bedsOwned: 1 } }, {
+    returnDocument: 'after', // Populates doc in the .then() with the version after update
+    sort: { createdDate: 'descending' },
   }).lean().exec();
 
   // If we successfully save/update them in the database, send back the cat's info.
@@ -276,6 +288,52 @@ const updateLast = (req, res) => {
   });
 };
 
+// Dog functions here
+
+// function to create a new Dog
+const createDog = async (req, res) => {
+  const { name, breed, age } = req.body; // name breed age
+
+  if (!name || !breed || age === undefined) {
+    return res.status(400).render('page3', { error: 'Name, breed, and age are all required' });
+  }
+
+  try {
+    const newDog = new Dog({ name, breed, age });
+    await newDog.save();
+    return res.render('page3', { message: `${name} added successfully!` });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).render('page3', { error: 'Failed to create dog' });
+  }
+};
+
+// find a Dog by name and increase its age
+const increaseDogAge = async (req, res) => {
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).render('page3', { error: 'Name is required' });
+  }
+
+  try {
+    const dog = await Dog.findOneAndUpdate(
+      { name },
+      { $inc: { age: 1 } },
+      { new: true },
+    ).lean();
+
+    if (!dog) {
+      return res.status(404).render('page3', { error: `Dog named "${name}" not found` });
+    }
+
+    return res.render('page3', { message: `${dog.name} is now ${dog.age} years old` });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).render('page3', { error: 'Something went wrong' });
+  }
+};
+
 // A function to send back the 404 page.
 const notFound = (req, res) => {
   res.status(404).render('notFound', {
@@ -289,9 +347,12 @@ module.exports = {
   page1: hostPage1,
   page2: hostPage2,
   page3: hostPage3,
+  page4: hostPage4,
   getName,
   setName,
   updateLast,
   searchName,
   notFound,
+  createDog,
+  increaseDogAge,
 };

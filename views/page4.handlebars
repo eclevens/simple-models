@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>All Dogs</title>
+</head>
+
+<body>
+    <h1>All Dogs</h1>
+
+    <a href="/">Home</a>
+    <a href="/page1">Page 1</a>
+    <a href="/page2">Page 2</a>
+    <a href="/page3">Page 3</a>
+
+    {{#if error}}
+    <p>{{error}}</p>
+    {{/if}}
+
+    {{#if dogs.length}}
+    <ul>
+        {{#each dogs}}
+        <li>
+            <strong>Name:</strong> {{this.name}} |
+            <strong>Breed:</strong> {{this.breed}} |
+            <strong>Age:</strong> {{this.age}} |
+            <strong>Added:</strong> {{this.createdDate}}
+        </li>
+        {{/each}}
+    </ul>
+    {{else}}
+    <p>No dogs found.</p>
+    {{/if}}
+
+    <a href="/">Back to Home</a>
+</body>
+
+</html>
